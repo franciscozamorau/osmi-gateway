@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package osmi;
+
+option go_package = "osmi-gateway/gen;osmi";
+
+import "google/api/annotations.proto";
+
+service OsmiService {
+  rpc CreateTicket (TicketRequest) returns (TicketResponse) {
+    option (google.api.http) = {
+      post: "/tickets"
+      body: "*"
+    };
+  }
+}
+
+message TicketRequest {
+  string event_id = 1;
+  string user_id = 2;
+}
+
+message TicketResponse {
+  string ticket_id = 1;
+  string status = 2;
+}

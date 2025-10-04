@@ -1,0 +1,17 @@
+# Go
+*.exe
+*.out
+*.test
+*.log
+
+# Protobuf
+gen/*.pb.go
+gen/*.pb_grpc.go
+docs/*.json
+
+# Config
+config/*.env
+
+# IDE/editor
+.vscode/
+.idea/
