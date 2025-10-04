@@ -13,6 +13,25 @@ service OsmiService {
       body: "*"
     };
   }
+
+  rpc GetEvent (EventRequest) returns (EventResponse) {
+    option (google.api.http) = {
+      get: "/events/{event_id}"
+    };
+  }
+
+  rpc ListTickets (UserRequest) returns (TicketListResponse) {
+    option (google.api.http) = {
+      get: "/users/{user_id}/tickets"
+    };
+  }
+
+  rpc CreateUser (UserRequest) returns (UserResponse) {
+    option (google.api.http) = {
+      post: "/users"
+      body: "*"
+    };
+  }
 }
 
 message TicketRequest {
@@ -23,4 +42,30 @@ message TicketRequest {
 message TicketResponse {
   string ticket_id = 1;
   string status = 2;
+}
+
+message EventRequest {
+  string event_id = 1;
+}
+
+message EventResponse {
+  string event_id = 1;
+  string name = 2;
+  string location = 3;
+  string date = 4;
+}
+
+message UserRequest {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message UserResponse {
+  string user_id = 1;
+  string status = 2;
+}
+
+message TicketListResponse {
+  repeated TicketResponse tickets = 1;
 }
