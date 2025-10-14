@@ -78,4 +78,4 @@ Logging: registra cada petición en consola
 JWT:
 ```
 ## Autor
-### Francisco D. Zamora Fullstack / Developer & Systems Engineer
+### Francisco D. Zamora Urrutia Fullstack Developer & Systems Engineer

@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	osmi "osmi-gateway/gen"
-	"osmi-gateway/internal/middleware"
 	"osmi-gateway/internal/utils"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -30,10 +29,8 @@ func main() {
 		log.Fatalf("Failed to register handler: %v", err)
 	}
 
-	handler := middleware.Logging(middleware.CORS(mux))
-
 	log.Println("Gateway running on :8080")
-	http.ListenAndServe(":8080", handler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func validateRequest(ctx context.Context, w http.ResponseWriter, resp proto.Message) error {
