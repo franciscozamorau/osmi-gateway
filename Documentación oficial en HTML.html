@@ -1,0 +1,49 @@
+<h1>Osmi API Gateway Documentation</h1>
+
+<h2>Endpoints Overview</h2>
+<table border="1">
+  <tr>
+    <th>HTTP Method</th><th>Route</th><th>gRPC Method</th><th>Request Body</th><th>Response</th>
+  </tr>
+  <tr>
+    <td>POST</td><td>/users</td><td>CreateUser</td>
+    <td>{ "user_id": "u123", "name": "Francisco Zamora", "email": "fran@osmi.com" }</td>
+    <td>{ "user_id": "u123", "status": "created" }</td>
+  </tr>
+  <tr>
+    <td>POST</td><td>/customers</td><td>CreateCustomer</td>
+    <td>{ "name": "Francisco Zamora", "email": "fran@osmi.com", "phone": "+52..." }</td>
+    <td>{ "id": 1, "name": "...", "email": "...", "phone": "...", "public_id": "..." }</td>
+  </tr>
+  <tr>
+    <td>GET</td><td>/customers/{id}</td><td>GetCustomer</td>
+    <td>(no body)</td>
+    <td>{ "id": 1, "name": "...", "email": "...", "phone": "...", "public_id": "..." }</td>
+  </tr>
+  <tr>
+    <td>POST</td><td>/tickets</td><td>CreateTicket</td>
+    <td>{ "event_id": "EVT-001", "user_id": "USR-001", "category_id": "CAT-A" }</td>
+    <td>{ "ticket_id": "TICKET-123", "status": "issued", "code": "ABC123", "qr_code_url": "..." }</td>
+  </tr>
+</table>
+
+<h2>Error Codes</h2>
+<table border="1">
+  <tr><th>Code</th><th>Message</th><th>Cause</th></tr>
+  <tr><td>5</td><td>Not Found</td><td>Ruta HTTP no registrada o método no implementado</td></tr>
+  <tr><td>12</td><td>Unimplemented</td><td>Método gRPC no implementado en service.go</td></tr>
+</table>
+
+<h2>Validation Notes</h2>
+<ul>
+  <li>Todos los endpoints requieren <code>Content-Type: application/json</code></li>
+  <li>Los cuerpos deben coincidir con los mensajes definidos en <code>osmi.proto</code></li>
+  <li>Las rutas deben estar correctamente anotadas con <code>google.api.http</code></li>
+</ul>
+
+<h2>Deployment Notes</h2>
+<ul>
+  <li><code>osmi-server</code> debe correr en <code>localhost:50051</code></li>
+  <li><code>osmi-gateway</code> debe correr en <code>localhost:8080</code></li>
+  <li>Ambos deben tener los stubs generados correctamente (<code>.pb.go</code>, <code>.pb.gw.go</code>)</li>
+</ul>
