@@ -29,27 +29,49 @@ osmi-gateway/
 
 ## Cómo ejecutar
 
-Requisitos
+** Requisitos **
 Go 1.21+
 Servidor osmi-server corriendo en localhost:50051
 Archivos generados por protoc actualizados (.pb.go, .pb.gw.go)
-Comando
 
+** Comando **
 ```bash
 go run cmd/main.go
 ```
-Endpoint REST
+
+### Endpoint REST
 
 ```bash
-Método  Endpoint                         Descripción
-POST      /tickets                       Crea un ticket
-GET     /events/{event_id}             Consulta un evento
-GET     /users/{user_id}/tickets       Lista tickets de usuario
-POST    /users                         Crea un usuario
-POST    /customers                    Crea un cliente
-GET     /customers/{id}               Consulta cliente por ID
-Validaciones
-bash
+Método     Endpoint                         Descripción
+POST       /tickets                         Crea un ticket
+GET        /events/{event_id}               Consulta un evento
+GET        /users/{user_id}/tickets         Lista tickets de usuario
+POST       /users                           Crea un usuario
+POST       /customers                       Crea un cliente
+GET        /customers/{id}                  Consulta cliente por ID
+POST       /events                          crear evento
+GET        /events                          listar eventos
+PUT        /events/{id}                     actualizar evento
+DELETE     /events/{id}                     eliminar evento
+POST       /categories                      crear categoría
+GET        /categories                      listar categorías
+POST       /venues                          crear sede
+GET        /venues                          listar sedes
+
+Módulo        	Método gRPC / REST	      Descripción	               Estado
+osmi-server	    CreateCustomer	          Crea cliente	              ✅ probado
+osmi-server	    GetCustomer	              Consulta cliente por ID	    ⏳ probar
+osmi-server	    CreateTicket	            Crea ticket	                ✅ probado
+osmi-gateway	  POST /customers	          Proxy a CreateCustomer	    ⏳ probar
+osmi-gateway	  GET /customers/{id}	      Proxy a GetCustomer	        ⏳ probar
+osmi-gateway	  POST /tickets	            Proxy a CreateTicket	      ✅ probado
+osmi-gateway	  GET /events/{event_id}	  Consulta evento	            ⏳ implementar
+osmi-gateway	  GET /users/{id}/tickets	  Lista tickets de usuario	  ⏳ implementar
+osmi-gateway	  POST /users	              Crea usuario	              ⏳ implementar
+```
+
+### Validaciones
+``` bash
 event_id: formato EVT123
 user_id: formato USR456
 email: contiene @

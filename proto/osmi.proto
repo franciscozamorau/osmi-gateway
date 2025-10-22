@@ -100,3 +100,42 @@ message CustomerResponse {
   string phone = 4;
   string public_id = 5;
 }
+
+
+rpc CreateEvent (EventRequest) returns (EventResponse);
+rpc GetEvent (EventLookup) returns (EventResponse);
+rpc ListEvents (Empty) returns (EventListResponse);
+
+message EventRequest {
+  string name = 1;
+  string description = 2;
+  string short_description = 3;
+  string start_date = 4;
+  string end_date = 5;
+  string location = 6;
+  string venue_details = 7;
+  string category = 8;
+  string tags = 9;
+  bool is_active = 10;
+  bool is_published = 11;
+  string image_url = 12;
+  string banner_url = 13;
+  int32 max_attendees = 14;
+}
+
+message EventLookup {
+  string event_id = 1;
+}
+
+message EventResponse {
+  string public_id = 1;
+  string name = 2;
+  string location = 3;
+  string date = 4;
+}
+
+message EventListResponse {
+  repeated EventResponse events = 1;
+}
+
+message Empty {}
