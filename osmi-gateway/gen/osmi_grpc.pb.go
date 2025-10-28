@@ -20,11 +20,13 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	OsmiService_CreateTicket_FullMethodName   = "/osmi.OsmiService/CreateTicket"
-	OsmiService_GetEvent_FullMethodName       = "/osmi.OsmiService/GetEvent"
 	OsmiService_ListTickets_FullMethodName    = "/osmi.OsmiService/ListTickets"
 	OsmiService_CreateUser_FullMethodName     = "/osmi.OsmiService/CreateUser"
 	OsmiService_CreateCustomer_FullMethodName = "/osmi.OsmiService/CreateCustomer"
 	OsmiService_GetCustomer_FullMethodName    = "/osmi.OsmiService/GetCustomer"
+	OsmiService_CreateEvent_FullMethodName    = "/osmi.OsmiService/CreateEvent"
+	OsmiService_GetEvent_FullMethodName       = "/osmi.OsmiService/GetEvent"
+	OsmiService_ListEvents_FullMethodName     = "/osmi.OsmiService/ListEvents"
 )
 
 // OsmiServiceClient is the client API for OsmiService service.
@@ -32,11 +34,13 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OsmiServiceClient interface {
 	CreateTicket(ctx context.Context, in *TicketRequest, opts ...grpc.CallOption) (*TicketResponse, error)
-	GetEvent(ctx context.Context, in *EventRequest, opts ...grpc.CallOption) (*EventResponse, error)
-	ListTickets(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (*TicketListResponse, error)
+	ListTickets(ctx context.Context, in *UserLookup, opts ...grpc.CallOption) (*TicketListResponse, error)
 	CreateUser(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	CreateCustomer(ctx context.Context, in *CustomerRequest, opts ...grpc.CallOption) (*CustomerResponse, error)
 	GetCustomer(ctx context.Context, in *CustomerLookup, opts ...grpc.CallOption) (*CustomerResponse, error)
+	CreateEvent(ctx context.Context, in *EventRequest, opts ...grpc.CallOption) (*EventResponse, error)
+	GetEvent(ctx context.Context, in *EventLookup, opts ...grpc.CallOption) (*EventResponse, error)
+	ListEvents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*EventListResponse, error)
 }
 
 type osmiServiceClient struct {
@@ -57,17 +61,7 @@ func (c *osmiServiceClient) CreateTicket(ctx context.Context, in *TicketRequest,
 	return out, nil
 }
 
-func (c *osmiServiceClient) GetEvent(ctx context.Context, in *EventRequest, opts ...grpc.CallOption) (*EventResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EventResponse)
-	err := c.cc.Invoke(ctx, OsmiService_GetEvent_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *osmiServiceClient) ListTickets(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (*TicketListResponse, error) {
+func (c *osmiServiceClient) ListTickets(ctx context.Context, in *UserLookup, opts ...grpc.CallOption) (*TicketListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TicketListResponse)
 	err := c.cc.Invoke(ctx, OsmiService_ListTickets_FullMethodName, in, out, cOpts...)
@@ -107,16 +101,48 @@ func (c *osmiServiceClient) GetCustomer(ctx context.Context, in *CustomerLookup,
 	return out, nil
 }
 
+func (c *osmiServiceClient) CreateEvent(ctx context.Context, in *EventRequest, opts ...grpc.CallOption) (*EventResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EventResponse)
+	err := c.cc.Invoke(ctx, OsmiService_CreateEvent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *osmiServiceClient) GetEvent(ctx context.Context, in *EventLookup, opts ...grpc.CallOption) (*EventResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EventResponse)
+	err := c.cc.Invoke(ctx, OsmiService_GetEvent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *osmiServiceClient) ListEvents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*EventListResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EventListResponse)
+	err := c.cc.Invoke(ctx, OsmiService_ListEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OsmiServiceServer is the server API for OsmiService service.
 // All implementations must embed UnimplementedOsmiServiceServer
 // for forward compatibility.
 type OsmiServiceServer interface {
 	CreateTicket(context.Context, *TicketRequest) (*TicketResponse, error)
-	GetEvent(context.Context, *EventRequest) (*EventResponse, error)
-	ListTickets(context.Context, *UserRequest) (*TicketListResponse, error)
+	ListTickets(context.Context, *UserLookup) (*TicketListResponse, error)
 	CreateUser(context.Context, *UserRequest) (*UserResponse, error)
 	CreateCustomer(context.Context, *CustomerRequest) (*CustomerResponse, error)
 	GetCustomer(context.Context, *CustomerLookup) (*CustomerResponse, error)
+	CreateEvent(context.Context, *EventRequest) (*EventResponse, error)
+	GetEvent(context.Context, *EventLookup) (*EventResponse, error)
+	ListEvents(context.Context, *Empty) (*EventListResponse, error)
 	mustEmbedUnimplementedOsmiServiceServer()
 }
 
@@ -130,10 +156,7 @@ type UnimplementedOsmiServiceServer struct{}
 func (UnimplementedOsmiServiceServer) CreateTicket(context.Context, *TicketRequest) (*TicketResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateTicket not implemented")
 }
-func (UnimplementedOsmiServiceServer) GetEvent(context.Context, *EventRequest) (*EventResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetEvent not implemented")
-}
-func (UnimplementedOsmiServiceServer) ListTickets(context.Context, *UserRequest) (*TicketListResponse, error) {
+func (UnimplementedOsmiServiceServer) ListTickets(context.Context, *UserLookup) (*TicketListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTickets not implemented")
 }
 func (UnimplementedOsmiServiceServer) CreateUser(context.Context, *UserRequest) (*UserResponse, error) {
@@ -144,6 +167,15 @@ func (UnimplementedOsmiServiceServer) CreateCustomer(context.Context, *CustomerR
 }
 func (UnimplementedOsmiServiceServer) GetCustomer(context.Context, *CustomerLookup) (*CustomerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCustomer not implemented")
+}
+func (UnimplementedOsmiServiceServer) CreateEvent(context.Context, *EventRequest) (*EventResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateEvent not implemented")
+}
+func (UnimplementedOsmiServiceServer) GetEvent(context.Context, *EventLookup) (*EventResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEvent not implemented")
+}
+func (UnimplementedOsmiServiceServer) ListEvents(context.Context, *Empty) (*EventListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListEvents not implemented")
 }
 func (UnimplementedOsmiServiceServer) mustEmbedUnimplementedOsmiServiceServer() {}
 func (UnimplementedOsmiServiceServer) testEmbeddedByValue()                     {}
@@ -184,26 +216,8 @@ func _OsmiService_CreateTicket_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OsmiService_GetEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EventRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OsmiServiceServer).GetEvent(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OsmiService_GetEvent_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OsmiServiceServer).GetEvent(ctx, req.(*EventRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _OsmiService_ListTickets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UserRequest)
+	in := new(UserLookup)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -215,7 +229,7 @@ func _OsmiService_ListTickets_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: OsmiService_ListTickets_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OsmiServiceServer).ListTickets(ctx, req.(*UserRequest))
+		return srv.(OsmiServiceServer).ListTickets(ctx, req.(*UserLookup))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -274,6 +288,60 @@ func _OsmiService_GetCustomer_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OsmiService_CreateEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EventRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OsmiServiceServer).CreateEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OsmiService_CreateEvent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OsmiServiceServer).CreateEvent(ctx, req.(*EventRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OsmiService_GetEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EventLookup)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OsmiServiceServer).GetEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OsmiService_GetEvent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OsmiServiceServer).GetEvent(ctx, req.(*EventLookup))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OsmiService_ListEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OsmiServiceServer).ListEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OsmiService_ListEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OsmiServiceServer).ListEvents(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OsmiService_ServiceDesc is the grpc.ServiceDesc for OsmiService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -284,10 +352,6 @@ var OsmiService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateTicket",
 			Handler:    _OsmiService_CreateTicket_Handler,
-		},
-		{
-			MethodName: "GetEvent",
-			Handler:    _OsmiService_GetEvent_Handler,
 		},
 		{
 			MethodName: "ListTickets",
@@ -304,6 +368,18 @@ var OsmiService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCustomer",
 			Handler:    _OsmiService_GetCustomer_Handler,
+		},
+		{
+			MethodName: "CreateEvent",
+			Handler:    _OsmiService_CreateEvent_Handler,
+		},
+		{
+			MethodName: "GetEvent",
+			Handler:    _OsmiService_GetEvent_Handler,
+		},
+		{
+			MethodName: "ListEvents",
+			Handler:    _OsmiService_ListEvents_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

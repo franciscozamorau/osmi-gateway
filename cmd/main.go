@@ -12,7 +12,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/franciscozamorau/osmi-gateway/gen"
-	"github.com/franciscozamorau/osmi-gateway/internal/handlers"
 	"github.com/franciscozamorau/osmi-gateway/internal/utils"
 )
 
@@ -34,20 +33,20 @@ func main() {
 
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	// Gateway generado por protoc-gen-grpc-gateway
-	err := pb.RegisterOsmiServiceHandlerFromEndpoint(ctx, mux, "osmi-server:50051", opts)
+	// ✅ SOLO Gateway automático - genera TODAS las rutas
+	err := pb.RegisterOsmiServiceHandlerFromEndpoint(ctx, mux, "localhost:50051", opts)
 	if err != nil {
 		log.Fatalf("Failed to register gRPC-Gateway handler: %v", err)
 	}
 
-	// Handlers manuales conectados al router
-	http.HandleFunc("/customers", handlers.CreateCustomerHandler)
-	http.HandleFunc("/tickets", handlers.CreateTicketHandler)
-	http.HandleFunc("/events", handlers.CreateEventHandler)
-	http.HandleFunc("/users", handlers.CreateUserHandler)
+	// ❌ ELIMINAR handlers manuales - causan duplicación
+	// http.HandleFunc("/customers", handlers.CreateCustomerHandler)
+	// http.HandleFunc("/tickets", handlers.CreateTicketHandler)
+	// http.HandleFunc("/events", handlers.CreateEventHandler)
+	// http.HandleFunc("/users", handlers.CreateUserHandler)
 
-	// Gateway multiplexado en /api/
-	http.Handle("/api/", http.StripPrefix("/api", mux))
+	// ✅ Usar directamente el gateway
+	http.Handle("/", mux)
 
 	port := os.Getenv("GATEWAY_PORT")
 	if port == "" {
@@ -55,6 +54,16 @@ func main() {
 	}
 
 	log.Printf("Gateway running on :%s", port)
+	log.Printf("Available endpoints:")
+	log.Printf("  POST   /customers")
+	log.Printf("  GET    /customers/{id}")
+	log.Printf("  POST   /events")
+	log.Printf("  GET    /events/{public_id}")
+	log.Printf("  GET    /events")
+	log.Printf("  POST   /tickets")
+	log.Printf("  GET    /users/{user_id}/tickets")
+	log.Printf("  POST   /users")
+
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
