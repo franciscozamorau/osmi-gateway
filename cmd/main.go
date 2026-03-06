@@ -4,10 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 
+	"github.com/franciscozamorau/osmi-gateway/internal/config"
+	"github.com/franciscozamorau/osmi-gateway/internal/routes"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -15,9 +15,7 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Printf("No .env file found")
-	}
+	cfg := config.Load()
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -29,42 +27,21 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	grpcServerAddr := os.Getenv("GRPC_SERVER_ADDR")
-	if grpcServerAddr == "" {
-		grpcServerAddr = "localhost:50051"
-	}
+	log.Printf("Conectando a gRPC server: %s", cfg.GRPCServerAddr)
 
-	log.Printf("Connecting to gRPC at: %s", grpcServerAddr)
-
-	err := pb.RegisterOsmiServiceHandlerFromEndpoint(ctx, mux, grpcServerAddr, opts)
+	// Registrar TODOS los métodos gRPC automáticamente
+	err := pb.RegisterOsmiServiceHandlerFromEndpoint(ctx, mux, cfg.GRPCServerAddr, opts)
 	if err != nil {
-		log.Fatalf("Failed to register gateway: %v", err)
+		log.Fatalf("Error registrando gateway: %v", err)
 	}
 
-	mux.HandlePath("GET", "/health", func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"healthy","service":"osmi-gateway"}`))
-	})
+	// Configurar router con middleware y rutas personalizadas
+	handler := routes.SetupRouter(mux)
 
-	// Usar puerto 8083 para evitar conflicto
-	port := "8083"
+	log.Printf("🚀 Gateway iniciado en puerto %s", cfg.HTTPPort)
+	log.Println("📡 Endpoints REST disponibles:")
 
-	log.Printf("Starting gRPC Gateway on port %s", port)
-	log.Println("REST Endpoints available:")
-	log.Println("  GET  /health")
-	log.Println("  POST /tickets")
-	log.Println("  GET  /users/{id}/tickets")
-	log.Println("  POST /customers")
-	log.Println("  GET  /customers/{id}")
-	log.Println("  POST /users")
-	log.Println("  POST /events")
-	log.Println("  GET  /events/{id}")
-	log.Println("  GET  /events")
-	log.Println("  POST /categories")
-	log.Println("  GET  /events/{id}/categories")
-
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
+	if err := http.ListenAndServe(":"+cfg.HTTPPort, handler); err != nil {
+		log.Fatalf("Error en servidor: %v", err)
 	}
 }
