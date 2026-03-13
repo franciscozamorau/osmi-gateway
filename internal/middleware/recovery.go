@@ -1,0 +1,18 @@
+// internal/middleware/recovery.go
+package middleware
+
+import (
+	"net/http"
+)
+
+func Recovery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				// Log del error y stack trace
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}

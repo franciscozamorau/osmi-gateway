@@ -1,3 +1,4 @@
+// cmd/main.go
 package main
 
 import (
@@ -5,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/franciscozamorau/osmi-gateway/internal/client"
 	"github.com/franciscozamorau/osmi-gateway/internal/config"
 	"github.com/franciscozamorau/osmi-gateway/internal/routes"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -21,25 +23,29 @@ func main() {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// 1. Crear cliente gRPC para conexión (opcional, para clientes específicos)
+	grpcClient, err := client.NewGRPCClient(cfg)
+	if err != nil {
+		log.Fatalf("Failed to create gRPC client: %v", err)
+	}
+	defer grpcClient.Close()
+
+	// 2. Crear mux para el gateway
 	mux := runtime.NewServeMux()
 
+	// 3. Registrar TODOS los métodos gRPC automáticamente (¡ESTA ES LA LÍNEA CLAVE!)
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-
-	log.Printf("Conectando a gRPC server: %s", cfg.GRPCServerAddr)
-
-	// Registrar TODOS los métodos gRPC automáticamente
-	err := pb.RegisterOsmiServiceHandlerFromEndpoint(ctx, mux, cfg.GRPCServerAddr, opts)
+	err = pb.RegisterOsmiServiceHandlerFromEndpoint(ctx, mux, cfg.GRPCServerAddr, opts)
 	if err != nil {
-		log.Fatalf("Error registrando gateway: %v", err)
+		log.Fatalf("Failed to register gRPC gateway: %v", err)
 	}
 
-	// Configurar router con middleware y rutas personalizadas
-	handler := routes.SetupRouter(mux)
+	// 4. Configurar router con middleware y rutas personalizadas
+	handler := routes.SetupRouter(mux, grpcClient)
 
-	log.Printf("🚀 Gateway iniciado en puerto %s", cfg.HTTPPort)
-	log.Println("📡 Endpoints REST disponibles:")
+	log.Printf("Gateway iniciado en puerto %s", cfg.HTTPPort)
 
 	if err := http.ListenAndServe(":"+cfg.HTTPPort, handler); err != nil {
 		log.Fatalf("Error en servidor: %v", err)

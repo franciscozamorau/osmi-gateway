@@ -2,49 +2,62 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
-	"os"
+	"time"
 
-	"github.com/franciscozamorau/osmi-gateway/internal/handlers"
+	"github.com/franciscozamorau/osmi-gateway/internal/client"
 	"github.com/franciscozamorau/osmi-gateway/internal/middleware"
+	pb "github.com/franciscozamorau/osmi-protobuf/gen/pb"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
 
-func SetupRouter(gwmux *runtime.ServeMux) http.Handler {
-	// Configuración JWT
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		jwtSecret = "tu-secreto-jwt-por-defecto-cambiar-en-produccion"
-	}
-	authMiddleware := middleware.NewJWTConfig(jwtSecret)
+func SetupRouter(gwmux *runtime.ServeMux, grpcClient *client.GRPCClient) http.Handler {
+	// Cliente para customers
+	customerClient := client.NewCustomerClient(grpcClient.Conn)
 
-	// Rutas públicas (no requieren autenticación)
-	gwmux.HandlePath("GET", "/health", func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-		handlers.HealthHandler(w, r)
+	// ============ RUTAS PERSONALIZADAS ============
+
+	// GET /customers/{public_id} - Usando public_id en lugar de id numérico
+	gwmux.HandlePath("GET", "/customers/{public_id}", func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
+		publicID := pathParams["public_id"]
+		if publicID == "" {
+			http.Error(w, "public_id is required", http.StatusBadRequest)
+			return
+		}
+
+		// Construir lookup con public_id
+		lookup := &pb.CustomerLookup{
+			Lookup: &pb.CustomerLookup_PublicId{
+				PublicId: publicID,
+			},
+		}
+
+		// Llamar al cliente gRPC
+		resp, err := customerClient.GetCustomer(r.Context(), lookup)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Devolver respuesta
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
 	})
 
-	// NOTA: Las rutas gRPC (/customers, /events, /tickets, etc.)
-	// ya están registradas automáticamente por RegisterOsmiServiceHandlerFromEndpoint
-	// en main.go. NO necesitas duplicarlas aquí.
-
-	// Ruta protegida de ejemplo (opcional)
-	protectedHandler := authMiddleware.Auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// ============ RUTAS PÚBLICAS ============
+	gwmux.HandlePath("GET", "/health", func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message":"Acceso autorizado a ruta protegida"}`))
-	}))
-
-	gwmux.HandlePath("GET", "/api/protected", func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-		protectedHandler.ServeHTTP(w, r)
+		w.Write([]byte(`{"status":"healthy","service":"osmi-gateway"}`))
 	})
 
-	// Aplicar middleware a TODAS las rutas
+	// ============ MIDDLEWARE ============
 	handler := middleware.Logging(gwmux)
 	handler = middleware.CORS(handler)
 
-	// Rate limiting (opcional, descomentar si lo necesitas)
-	// rateLimiter := middleware.NewRateLimiter(10, 20, 3*time.Minute)
-	// handler = rateLimiter.Limit(handler)
+	rateLimiter := middleware.NewRateLimiter(10, 20, 3*time.Minute)
+	handler = rateLimiter.Limit(handler)
 
 	return handler
 }
