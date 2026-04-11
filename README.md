@@ -15,6 +15,12 @@ Regla #4: El Cliente gRPC es un Detalle de Implementación. La lógica de cómo 
 
 Regla #5: Los Errores se Mapean, No se Filtran. El grpc/errors/mapper.go es crucial. Un error codes.NotFound de gRPC se convierte en un 404 Not Found HTTP con un mensaje amigable. Nunca dejamos que un error crudo de gRPC llegue al cliente.
 
+gateway debe tener solo 4 responsabilidades:
+
+1️⃣ recibir HTTP
+2️⃣ aplicar middleware
+3️⃣ convertir a gRPC
+4️⃣ devolver JSON
 
 osmi-gateway/
 ├── cmd/
@@ -47,6 +53,8 @@ osmi-gateway/
 │   │   │   └── health_handler.go    # GET /health, GET /ready
 │   │   ├── webhook/                 # Endpoints para recibir webhooks de terceros (Stripe, etc.)
 │   │   │   └── webhook_handler.go   # POST /webhooks/stripe
+│   │   ├── metrics/                 # 
+
 │   │
 │   └── observability/               #
 │   │   ├── metrics.go
@@ -74,3 +82,45 @@ osmi-gateway/
 ├── go.sum
 ├── Makefile
 └── README.md
+
+
+6. Flujo real dentro del gateway
+Así funcionará una petición.
+
+POST /customers
+flujo:
+
+HTTP request
+     │
+middleware chain
+     │
+gRPC-Gateway
+     │
+proto mapping
+     │
+gRPC call
+     │
+osmi-server
+     │
+response
+     │
+HTTP JSON
+
+Tu gateway ni siquiera toca el negocio.
+
+7. Middleware profesional (orden correcto)
+Es MUY importante el orden correcto:
+
+RequestID
+   ↓
+Recovery
+   ↓
+Logging
+   ↓
+CORS
+   ↓
+RateLimit
+   ↓
+Auth
+   ↓
+Router

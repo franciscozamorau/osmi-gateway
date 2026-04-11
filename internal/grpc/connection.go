@@ -24,19 +24,25 @@ func NewClientConnection(cfg *config.Config) (*ClientConnection, error) {
 		PermitWithoutStream: true,
 	}
 
+	// CORREGIDO: El orden correcto es (target, opts...)
+	// Antes tenía grpc.NewClient(cfg.GRPCServerAddr, opts...) pero faltaban las opciones
 	conn, err := grpc.NewClient(
 		cfg.GRPCServerAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepaliveParams),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(1024*1024*10), // 10MB
+			grpc.MaxCallSendMsgSize(1024*1024*10), // 10MB también para envío
 		),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			MinConnectTimeout: 5 * time.Second,
+		}),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("Conectado a gRPC server en %s", cfg.GRPCServerAddr)
+	log.Printf("✅ Conectado a gRPC server en %s", cfg.GRPCServerAddr)
 
 	return &ClientConnection{
 		conn: conn,
@@ -50,6 +56,7 @@ func (c *ClientConnection) GetConnection() *grpc.ClientConn {
 
 func (c *ClientConnection) Close() error {
 	if c.conn != nil {
+		log.Printf("Cerrando conexión gRPC con %s", c.cfg.GRPCServerAddr)
 		return c.conn.Close()
 	}
 	return nil

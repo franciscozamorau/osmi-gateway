@@ -2,10 +2,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/franciscozamorau/osmi-gateway/internal/config"
 	"github.com/franciscozamorau/osmi-gateway/internal/server"
@@ -27,15 +29,23 @@ func main() {
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
 
-		log.Println("Apagando servidor...")
-		if err := srv.Stop(); err != nil {
-			log.Printf("Error al apagar: %v", err)
+		log.Println("🛑 Apagando servidor...")
+
+		// Crear contexto con timeout para el shutdown
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// Intentar shutdown graceful
+		if err := srv.Stop(ctx); err != nil {
+			log.Printf("❌ Error al apagar: %v", err)
+		} else {
+			log.Println("✅ Servidor apagado correctamente")
 		}
 	}()
 
 	// 4. Iniciar servidor
-	log.Printf("Gateway iniciado en puerto %s", cfg.HTTPPort)
+	log.Printf("🚀 Gateway iniciado en puerto %s", cfg.HTTPPort)
 	if err := srv.Start(); err != nil {
-		log.Fatalf("Error en servidor: %v", err)
+		log.Fatalf("❌ Error en servidor: %v", err)
 	}
 }

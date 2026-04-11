@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/franciscozamorau/osmi-gateway/internal/config"
-	gatewayGrpc "github.com/franciscozamorau/osmi-gateway/internal/grpc" // ALIAS para tu paquete
+	gatewayGrpc "github.com/franciscozamorau/osmi-gateway/internal/grpc"
 	"github.com/franciscozamorau/osmi-gateway/internal/handlers/health"
 	"github.com/franciscozamorau/osmi-gateway/internal/middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -49,17 +49,25 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		return nil, err
 	}
 
-	// 4. APLICAR MIDDLEWARE MANUALMENTE (SIN CHAIN)
-	// Envolvemos cada middleware de forma explícita
+	// 4. APLICAR MIDDLEWARE CON EL ORDEN CORRECTO
+	// El orden es importante: el primer middleware que envuelve es el más externo
+	// y se ejecuta primero en la petición entrante
 	var handler http.Handler = mux
 
-	// ORDEN CORRECTO (de afuera hacia adentro)
+	// ORDEN RECOMENDADO POR CHATGPT:
+	// 1. Recovery (el más externo) - Captura panics
+	// 2. RequestID - Asigna ID a cada request
+	// 3. Logging - Logea después de tener RequestID
+	// 4. RateLimit - Limita antes de procesar (protege auth)
+	// 5. Auth - Autentica después de rate limit
+	// 6. CORS (el más interno) - Maneja preflight antes que cualquier otra cosa
+
 	handler = middleware.Recovery(handler)  // 1. Recovery (el más externo)
 	handler = middleware.RequestID(handler) // 2. Request ID
 	handler = middleware.Logging(handler)   // 3. Logging
-	handler = middleware.CORS(handler)      // 4. CORS
-	handler = middleware.RateLimit(handler) // 5. Rate Limit
-	handler = middleware.Auth(handler)      // 6. Auth (el más interno)
+	handler = middleware.RateLimit(handler) // 4. Rate Limit
+	handler = middleware.Auth(handler)      // 5. Auth
+	handler = middleware.CORS(handler)      // 6. CORS (el más interno)
 
 	// 5. Registrar rutas manuales
 	mainMux := http.NewServeMux()
@@ -86,9 +94,19 @@ func (s *Server) Start() error {
 	return s.httpServer.ListenAndServe()
 }
 
-func (s *Server) Stop() error {
+// Stop realiza un shutdown graceful del servidor
+// Recibe un context para timeout
+func (s *Server) Stop(ctx context.Context) error {
+	// Cerrar conexión gRPC
 	if s.grpcConn != nil {
 		s.grpcConn.Close()
 	}
-	return s.httpServer.Close()
+
+	// Shutdown graceful del HTTP server
+	// Esto permite que las conexiones activas terminen antes de cerrar
+	if s.httpServer != nil {
+		return s.httpServer.Shutdown(ctx)
+	}
+
+	return nil
 }
