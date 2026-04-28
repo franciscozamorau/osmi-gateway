@@ -1,4 +1,3 @@
-// internal/config/config.go
 package config
 
 import (
@@ -14,6 +13,10 @@ type Config struct {
 	LogLevel       string
 	ReadTimeout    int
 	WriteTimeout   int
+	JWTSecret      string
+	RedisURL       string
+	RedisPassword  string
+	RedisDB        int
 }
 
 func Load() *Config {
@@ -24,6 +27,10 @@ func Load() *Config {
 		LogLevel:       getEnv("LOG_LEVEL", "info"),
 		ReadTimeout:    getEnvAsInt("READ_TIMEOUT", 15),
 		WriteTimeout:   getEnvAsInt("WRITE_TIMEOUT", 15),
+		JWTSecret:      getEnv("JWT_SECRET_KEY", ""),
+		RedisURL:       getEnv("REDIS_URL", "localhost:6379"),
+		RedisPassword:  getEnv("REDIS_PASSWORD", ""),
+		RedisDB:        getEnvAsInt("REDIS_DB", 0),
 	}
 }
 

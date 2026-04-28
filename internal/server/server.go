@@ -3,37 +3,53 @@ package server
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/franciscozamorau/osmi-gateway/internal/cache"
 	"github.com/franciscozamorau/osmi-gateway/internal/config"
 	gatewayGrpc "github.com/franciscozamorau/osmi-gateway/internal/grpc"
 	"github.com/franciscozamorau/osmi-gateway/internal/handlers/health"
 	"github.com/franciscozamorau/osmi-gateway/internal/middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"google.golang.org/grpc" // ← paquete oficial
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	pb "github.com/franciscozamorau/osmi-protobuf/gen/pb"
 )
 
 type Server struct {
-	config     *config.Config
-	grpcConn   *gatewayGrpc.ClientConnection // ← USAMOS EL ALIAS
-	httpServer *http.Server
+	config      *config.Config
+	grpcConn    *gatewayGrpc.ClientConnection
+	httpServer  *http.Server
+	redisClient *cache.RedisClient
 }
 
 func NewServer(cfg *config.Config) (*Server, error) {
-	// 1. Crear conexión gRPC (TU paquete, no el oficial)
+	if cfg.JWTSecret == "" {
+		log.Fatal("❌ JWT_SECRET_KEY is required in .env file")
+	}
+
+	// Inicializar Redis (opcional, para blacklist)
+	var redisClient *cache.RedisClient
+	if cfg.RedisURL != "" {
+		var err error
+		redisClient, err = cache.NewRedisClient(cfg.RedisURL, cfg.RedisPassword, cfg.RedisDB)
+		if err != nil {
+			log.Printf("⚠️ Redis not available, blacklist disabled: %v", err)
+		} else {
+			log.Println("✅ Redis connected for token blacklist")
+		}
+	}
+
 	grpcConn, err := gatewayGrpc.NewClientConnection(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Crear mux del gateway
 	mux := runtime.NewServeMux()
 
-	// 3. Registrar endpoints automáticos (usa el paquete oficial grpc)
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
@@ -49,32 +65,23 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		return nil, err
 	}
 
-	// 4. APLICAR MIDDLEWARE CON EL ORDEN CORRECTO
-	// El orden es importante: el primer middleware que envuelve es el más externo
-	// y se ejecuta primero en la petición entrante
 	var handler http.Handler = mux
 
-	// ORDEN RECOMENDADO POR CHATGPT:
-	// 1. Recovery (el más externo) - Captura panics
-	// 2. RequestID - Asigna ID a cada request
-	// 3. Logging - Logea después de tener RequestID
-	// 4. RateLimit - Limita antes de procesar (protege auth)
-	// 5. Auth - Autentica después de rate limit
-	// 6. CORS (el más interno) - Maneja preflight antes que cualquier otra cosa
+	handler = middleware.Recovery(handler)
+	handler = middleware.RequestID(handler)
+	handler = middleware.Logging(handler)
+	handler = middleware.RateLimit(handler)
+	handler = middleware.AuthExcludingPaths(handler, []string{
+		"/v1/auth/login",
+		"/health",
+		"/v1/auth/refresh",
+	}, cfg.JWTSecret, redisClient)
+	handler = middleware.CORS(handler)
 
-	handler = middleware.Recovery(handler)  // 1. Recovery (el más externo)
-	handler = middleware.RequestID(handler) // 2. Request ID
-	handler = middleware.Logging(handler)   // 3. Logging
-	handler = middleware.RateLimit(handler) // 4. Rate Limit
-	handler = middleware.Auth(handler)      // 5. Auth
-	handler = middleware.CORS(handler)      // 6. CORS (el más interno)
-
-	// 5. Registrar rutas manuales
 	mainMux := http.NewServeMux()
-	mainMux.Handle("/", handler)                        // Todas las rutas automáticas
-	mainMux.HandleFunc("/health", health.HealthHandler) // Ruta manual
+	mainMux.Handle("/", handler)
+	mainMux.HandleFunc("/health", health.HealthHandler)
 
-	// 6. Crear servidor HTTP
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.HTTPPort,
 		Handler:      mainMux,
@@ -84,9 +91,10 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	}
 
 	return &Server{
-		config:     cfg,
-		grpcConn:   grpcConn,
-		httpServer: httpServer,
+		config:      cfg,
+		grpcConn:    grpcConn,
+		httpServer:  httpServer,
+		redisClient: redisClient,
 	}, nil
 }
 
@@ -94,19 +102,15 @@ func (s *Server) Start() error {
 	return s.httpServer.ListenAndServe()
 }
 
-// Stop realiza un shutdown graceful del servidor
-// Recibe un context para timeout
 func (s *Server) Stop(ctx context.Context) error {
-	// Cerrar conexión gRPC
+	if s.redisClient != nil {
+		s.redisClient.Close()
+	}
 	if s.grpcConn != nil {
 		s.grpcConn.Close()
 	}
-
-	// Shutdown graceful del HTTP server
-	// Esto permite que las conexiones activas terminen antes de cerrar
 	if s.httpServer != nil {
 		return s.httpServer.Shutdown(ctx)
 	}
-
 	return nil
 }

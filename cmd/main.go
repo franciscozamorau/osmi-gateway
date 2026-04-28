@@ -1,4 +1,3 @@
-// cmd/main.go
 package main
 
 import (
@@ -11,9 +10,15 @@ import (
 
 	"github.com/franciscozamorau/osmi-gateway/internal/config"
 	"github.com/franciscozamorau/osmi-gateway/internal/server"
+	"github.com/joho/godotenv" // 🔥 AGREGAR ESTE IMPORT
 )
 
 func main() {
+	// 🔥 CARGAR .env ANTES DE TODO (IGUAL QUE EL SERVER)
+	if err := godotenv.Load(); err != nil {
+		log.Println("⚠️ No .env file found, using system environment variables")
+	}
+
 	// 1. Cargar configuración
 	cfg := config.Load()
 
@@ -31,11 +36,9 @@ func main() {
 
 		log.Println("🛑 Apagando servidor...")
 
-		// Crear contexto con timeout para el shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		// Intentar shutdown graceful
 		if err := srv.Stop(ctx); err != nil {
 			log.Printf("❌ Error al apagar: %v", err)
 		} else {

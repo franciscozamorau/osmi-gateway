@@ -17,22 +17,19 @@ type ClientConnection struct {
 }
 
 func NewClientConnection(cfg *config.Config) (*ClientConnection, error) {
-	// Configuración keepalive para conexiones estables
 	keepaliveParams := keepalive.ClientParameters{
 		Time:                10 * time.Second,
 		Timeout:             5 * time.Second,
 		PermitWithoutStream: true,
 	}
 
-	// CORREGIDO: El orden correcto es (target, opts...)
-	// Antes tenía grpc.NewClient(cfg.GRPCServerAddr, opts...) pero faltaban las opciones
 	conn, err := grpc.NewClient(
 		cfg.GRPCServerAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepaliveParams),
 		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(1024*1024*10), // 10MB
-			grpc.MaxCallSendMsgSize(1024*1024*10), // 10MB también para envío
+			grpc.MaxCallRecvMsgSize(1024*1024*10),
+			grpc.MaxCallSendMsgSize(1024*1024*10),
 		),
 		grpc.WithConnectParams(grpc.ConnectParams{
 			MinConnectTimeout: 5 * time.Second,
@@ -61,6 +58,3 @@ func (c *ClientConnection) Close() error {
 	}
 	return nil
 }
-
-// NOTA: Los clientes específicos (customer_client, event_client) ya NO EXISTEN
-// El gateway NO necesita clientes específicos porque usa el gateway automático
