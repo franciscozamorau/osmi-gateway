@@ -75,6 +75,8 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		"/v1/auth/login",
 		"/health",
 		"/v1/auth/refresh",
+		"/v1/events",
+		"/v1/events/",
 	}, cfg.JWTSecret, redisClient)
 	handler = middleware.CORS(handler)
 
