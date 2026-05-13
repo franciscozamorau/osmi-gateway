@@ -1,27 +1,30 @@
-# Etapa de build
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Copiar archivos de módulos
-COPY go.mod go.sum ./
+COPY osmi-gateway/go.mod osmi-gateway/go.sum ./osmi-gateway/
+COPY osmi-protobuf/go.mod ./osmi-protobuf/
+COPY osmi-protobuf/go.sum ./osmi-protobuf/
+COPY osmi-protobuf/gen ./osmi-protobuf/gen
+COPY osmi-protobuf/proto ./osmi-protobuf/proto
+
+WORKDIR /app/osmi-gateway
+
 RUN go mod download
 
-# Copiar código fuente
-COPY . .
+COPY osmi-gateway ./
 
-# Construir el binario del gateway
 RUN CGO_ENABLED=0 GOOS=linux go build -o gateway ./cmd/main.go
 
-# Etapa de runtime
+
 FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
-COPY --from=builder /app/gateway .
-COPY --from=builder /app/.env.production ./.env
+COPY --from=builder /app/osmi-gateway/gateway .
+COPY --from=builder /app/osmi-gateway/.env.production ./.env
 
 EXPOSE 8080
 

@@ -77,6 +77,13 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		"/v1/auth/refresh",
 		"/v1/events",
 		"/v1/events/",
+		"/v1/ticket-types",    // ← tipos de boleto públicos
+		"/v1/ticket-types/",   // ← Por si acaso
+		"/v1/customers",       // ← Permitir crear customer sin auth
+		"/v1/tickets/reserve", // ← Reserva pública
+		"/v1/orders",          // ← Órdenes públicas (invitado)
+		"/v1/payments",        // ← Pagos públicos (invitado)
+		"/v1/payments/intent",
 	}, cfg.JWTSecret, redisClient)
 	handler = middleware.CORS(handler)
 

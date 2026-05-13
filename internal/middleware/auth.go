@@ -113,7 +113,7 @@ func Auth(next http.Handler, jwtSecret string, redisClient *cache.RedisClient) h
 func AuthExcludingPaths(next http.Handler, excludePaths []string, jwtSecret string, redisClient *cache.RedisClient) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, path := range excludePaths {
-			if r.URL.Path == path {
+			if r.URL.Path == path || strings.HasPrefix(r.URL.Path, path) {
 				next.ServeHTTP(w, r)
 				return
 			}
